@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Loader2, X, Building, User } from "lucide-react"
+import { Loader2, X, Building, User, Palette } from "lucide-react"
+import { getAvailableSectors } from "@/lib/services/imageService"
 import type { User as UserType } from "@/lib/models/User"
 
 interface WasteRegistrationModalProps {
@@ -37,11 +38,9 @@ interface WasteFormData {
 }
 
 export function WasteRegistrationModal({ user, isOpen, onClose, onWasteRegistered }: WasteRegistrationModalProps) {
-    if (!user) return null // Asegurarse de que el usuario esté definido antes de continuar
   const [formData, setFormData] = useState<WasteFormData>({
     name: "",
-    sector: user?.userType === "empresa" ? "industrial" : "residencial",
-    // sector: user.userType === "empresa" ? "industrial" : "residencial",
+    sector: user.userType === "empresa" ? "industrial" : "residencial",
     composition: "",
     quantity: 0,
     unit: "kg",
@@ -57,10 +56,14 @@ export function WasteRegistrationModal({ user, isOpen, onClose, onWasteRegistere
     }),
   })
   const [loading, setLoading] = useState(false)
+  const [generatingImage, setGeneratingImage] = useState(false)
+
+  const availableSectors = getAvailableSectors(user.userType)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setGeneratingImage(true)
 
     try {
       const response = await fetch("/api/waste/register", {
@@ -106,6 +109,7 @@ export function WasteRegistrationModal({ user, isOpen, onClose, onWasteRegistere
       alert("Error de conexión")
     } finally {
       setLoading(false)
+      setGeneratingImage(false)
     }
   }
 
@@ -147,10 +151,9 @@ export function WasteRegistrationModal({ user, isOpen, onClose, onWasteRegistere
                 <DialogTitle className="text-xl">
                   Registrar Residuo - {user.userType === "empresa" ? "Empresa" : "Persona"}
                 </DialogTitle>
-                <DialogDescription>
-                  {user.userType === "empresa"
-                    ? "Completa la información del residuo industrial"
-                    : "Completa la información del residuo doméstico"}
+                <DialogDescription className="flex items-center space-x-1">
+                  <Palette className="h-4 w-4 text-blue-500" />
+                  <span>Se generará una imagen automáticamente con Stability AI - Stable Diffusion</span>
                 </DialogDescription>
               </div>
             </div>
@@ -168,7 +171,7 @@ export function WasteRegistrationModal({ user, isOpen, onClose, onWasteRegistere
               type="text"
               placeholder={
                 user.userType === "empresa"
-                  ? "Ej: Residuos metálicos, Solventes industriales..."
+                  ? "Ej: Aceites vegetales usados, Residuos metálicos..."
                   : "Ej: Botellas de plástico, Papel periódico..."
               }
               value={formData.name}
@@ -177,26 +180,21 @@ export function WasteRegistrationModal({ user, isOpen, onClose, onWasteRegistere
             />
           </div>
 
-          {user.userType === "empresa" && (
-            <div>
-              <Label htmlFor="sector">Sector Industrial</Label>
-              <Select onValueChange={(value) => handleInputChange("sector", value)} defaultValue="industrial">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="industrial">Industrial</SelectItem>
-                  <SelectItem value="manufactura">Manufactura</SelectItem>
-                  <SelectItem value="quimico">Químico</SelectItem>
-                  <SelectItem value="alimentario">Alimentario</SelectItem>
-                  <SelectItem value="textil">Textil</SelectItem>
-                  <SelectItem value="construccion">Construcción</SelectItem>
-                  <SelectItem value="farmaceutico">Farmacéutico</SelectItem>
-                  <SelectItem value="automotriz">Automotriz</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div>
+            <Label htmlFor="sector">Sector</Label>
+            <Select onValueChange={(value) => handleInputChange("sector", value)} value={formData.sector}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSectors.map((sector) => (
+                  <SelectItem key={sector.value} value={sector.value}>
+                    {sector.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div>
             <Label htmlFor="composition">
@@ -206,8 +204,8 @@ export function WasteRegistrationModal({ user, isOpen, onClose, onWasteRegistere
               id="composition"
               placeholder={
                 user.userType === "empresa"
-                  ? "Describe la composición química, materiales, concentraciones..."
-                  : "Describe el residuo: materiales, estado, características..."
+                  ? "Ej: orgánico, aceites vegetales de cocina usados..."
+                  : "Ej: plástico, botellas PET transparentes..."
               }
               value={formData.composition}
               onChange={(e) => handleInputChange("composition", e.target.value)}
@@ -304,6 +302,18 @@ export function WasteRegistrationModal({ user, isOpen, onClose, onWasteRegistere
             </>
           )}
 
+          {generatingImage && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <Palette className="h-5 w-5 text-blue-600 animate-pulse" />
+                <span className="text-blue-800 font-medium">Generando imagen con Stability AI...</span>
+              </div>
+              <p className="text-blue-600 text-sm mt-1">
+                Creando una imagen fotorrealística para "{formData.name}" usando Stable Diffusion
+              </p>
+            </div>
+          )}
+
           <div className="flex space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1 bg-transparent">
               Cancelar
@@ -316,10 +326,13 @@ export function WasteRegistrationModal({ user, isOpen, onClose, onWasteRegistere
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Registrando...
+                  {generatingImage ? "Generando con IA..." : "Registrando..."}
                 </>
               ) : (
-                "Registrar Residuo"
+                <>
+                  <Palette className="mr-2 h-4 w-4" />
+                  Registrar con Stability AI
+                </>
               )}
             </Button>
           </div>

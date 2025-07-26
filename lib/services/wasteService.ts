@@ -1,16 +1,17 @@
 /**
- * Servicio para gestión de residuos con MongoDB
+ * Servicio actualizado para gestión de residuos con Stability AI
  */
 
 import { getDatabase } from "@/lib/mongodb"
 import { type Waste, type WasteRegistration, validateWaste } from "@/lib/models/Waste"
 import { getValorizationRoutes } from "@/lib/ai-algorithm"
+import { generateWasteImage } from "@/lib/services/imageService"
 import { ObjectId } from "mongodb"
 
 const COLLECTION_NAME = "wastes"
 
 /**
- * Registra un nuevo residuo y obtiene rutas de valorización
+ * Registra un nuevo residuo con generación automática de imagen usando Stability AI
  */
 export async function registerWaste(
   userId: string,
@@ -29,10 +30,32 @@ export async function registerWaste(
     // Obtener rutas de valorización usando IA
     const routes = getValorizationRoutes(wasteData)
 
+    // Generar imagen con Stability AI
+    console.log("🎨 Generando imagen con Stability AI para residuo:", wasteData.name)
+    const generatedImageBase64 = await generateWasteImage(
+      wasteData.name,
+      wasteData.sector,
+      wasteData.composition,
+      wasteData.userType,
+    )
+
+    let finalImageUrl: string | undefined
+
+    if (generatedImageBase64) {
+      console.log("✅ Imagen generada exitosamente con Stability AI")
+
+      // En un entorno de producción, aquí subirías la imagen a un servicio de almacenamiento
+      // Por ahora, guardamos la data URL directamente
+      finalImageUrl = generatedImageBase64
+    } else {
+      console.log("❌ No se pudo generar imagen, usando placeholder")
+    }
+
     // Crear registro de residuo
     const newWaste: Waste = {
       userId: new ObjectId(userId),
       ...wasteData,
+      generatedImage: finalImageUrl,
       routes,
       status: "registered",
       createdAt: new Date(),
@@ -119,17 +142,20 @@ export async function updateWasteStatus(wasteId: string, status: Waste["status"]
 export async function getWasteStats(): Promise<{
   total: number
   byStatus: Record<string, number>
-  byType: Record<string, number>
+  bySector: Record<string, number>
   totalQuantity: number
+  imagesGenerated: number
 }> {
   try {
     const db = await getDatabase()
     const collection = db.collection<Waste>(COLLECTION_NAME)
 
-    const [totalResult, statusResult, quantityResult] = await Promise.all([
+    const [totalResult, statusResult, sectorResult, quantityResult, imagesResult] = await Promise.all([
       collection.countDocuments(),
       collection.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]).toArray(),
+      collection.aggregate([{ $group: { _id: "$sector", count: { $sum: 1 } } }]).toArray(),
       collection.aggregate([{ $group: { _id: null, total: { $sum: "$quantity" } } }]).toArray(),
+      collection.countDocuments({ generatedImage: { $exists: true, $ne: null } }),
     ])
 
     const byStatus: Record<string, number> = {}
@@ -137,14 +163,20 @@ export async function getWasteStats(): Promise<{
       byStatus[item._id] = item.count
     })
 
+    const bySector: Record<string, number> = {}
+    sectorResult.forEach((item) => {
+      bySector[item._id] = item.count
+    })
+
     return {
       total: totalResult,
       byStatus,
-      byType: {}, // Se puede implementar después
+      bySector,
       totalQuantity: quantityResult[0]?.total || 0,
+      imagesGenerated: imagesResult,
     }
   } catch (error) {
     console.error("Error getting waste stats:", error)
-    return { total: 0, byStatus: {}, byType: {}, totalQuantity: 0 }
+    return { total: 0, byStatus: {}, bySector: {}, totalQuantity: 0, imagesGenerated: 0 }
   }
 }

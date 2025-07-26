@@ -75,8 +75,7 @@ export default function DashboardPage() {
               <h1 className="text-2xl font-bold text-gray-900">Mis Residuos Registrados</h1>
               <p className="text-gray-600">Gestiona y revisa todos los residuos que has registrado</p>
             </div>
-
-            <WasteList wastes={wastes} onWasteUpdate={() => loadUserWastes(user._id!)} />
+            <WasteList user={user} wastes={wastes} onWasteUpdate={() => loadUserWastes(user._id!)} />
           </div>
         </main>
       </div>

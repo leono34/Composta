@@ -1,5 +1,5 @@
 /**
- * Modelo de Residuo para MongoDB
+ * Modelo de Residuo actualizado para MongoDB con imagen generada por IA
  */
 
 import type { ObjectId } from "mongodb"
@@ -30,9 +30,18 @@ export interface Waste {
       lng: number
     }
   }
+  // Nueva propiedad para la imagen generada por IA
+  generatedImage?: string
   images?: string[]
   routes: ValorizationRoute[]
   status: "registered" | "processing" | "valorized" | "completed"
+  userType: "persona" | "empresa"
+  // Información adicional para empresas
+  companyInfo?: {
+    department: string
+    contactPerson: string
+    urgency: "baja" | "media" | "alta" | "critica"
+  }
   createdAt: Date
   updatedAt: Date
   processedAt?: Date
@@ -50,6 +59,12 @@ export interface WasteRegistration {
       lat: number
       lng: number
     }
+  }
+  userType: "persona" | "empresa"
+  companyInfo?: {
+    department: string
+    contactPerson: string
+    urgency: "baja" | "media" | "alta" | "critica"
   }
   images?: string[]
 }
@@ -82,6 +97,10 @@ export const validateWaste = (wasteData: Partial<Waste>): string[] => {
 
   if (!wasteData.location?.address || wasteData.location.address.trim().length < 5) {
     errors.push("La dirección debe tener al menos 5 caracteres")
+  }
+
+  if (!wasteData.userType || !["persona", "empresa"].includes(wasteData.userType)) {
+    errors.push("Tipo de usuario inválido")
   }
 
   return errors
