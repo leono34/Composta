@@ -1,17 +1,18 @@
 /**
- * Servicio actualizado para gestión de residuos con Stability AI
+ * Servicio actualizado para gestión de residuos con trazabilidad automática
  */
 
 import { getDatabase } from "@/lib/mongodb"
 import { type Waste, type WasteRegistration, validateWaste } from "@/lib/models/Waste"
 import { getValorizationRoutes } from "@/lib/ai-algorithm"
 import { generateWasteImage } from "@/lib/services/imageService"
+import { createTraceability } from "@/lib/services/traceabilityService"
 import { ObjectId } from "mongodb"
 
 const COLLECTION_NAME = "wastes"
 
 /**
- * Registra un nuevo residuo con generación automática de imagen usando Stability AI
+ * Registra un nuevo residuo con generación automática de imagen y trazabilidad
  */
 export async function registerWaste(
   userId: string,
@@ -43,9 +44,6 @@ export async function registerWaste(
 
     if (generatedImageBase64) {
       console.log("✅ Imagen generada exitosamente con Stability AI")
-
-      // En un entorno de producción, aquí subirías la imagen a un servicio de almacenamiento
-      // Por ahora, guardamos la data URL directamente
       finalImageUrl = generatedImageBase64
     } else {
       console.log("❌ No se pudo generar imagen, usando placeholder")
@@ -63,10 +61,39 @@ export async function registerWaste(
     }
 
     const result = await collection.insertOne(newWaste)
+    const wasteWithId = { ...newWaste, _id: result.insertedId }
+
+    // Crear trazabilidad automáticamente
+    console.log("📋 Creando registro de trazabilidad...")
+    try {
+      await createTraceability({
+        wasteId: result.insertedId.toString(),
+        userId: userId,
+        productInfo: {
+          name: wasteData.name,
+          category: wasteData.sector,
+          materials: [
+            {
+              type: wasteData.composition.split(",")[0]?.trim() || "Material mixto",
+              percentage: 100,
+              recyclable: true,
+            },
+          ],
+          carbonFootprint: Math.round(Math.random() * 50 + 10),
+          recycledContent: Math.round(Math.random() * 30),
+          estimatedLifespan: Math.round(Math.random() * 24 + 6),
+        },
+        initialLocation: wasteData.location.address,
+      })
+      console.log("✅ Trazabilidad creada exitosamente")
+    } catch (traceabilityError) {
+      console.error("⚠️ Error creando trazabilidad:", traceabilityError)
+      // No fallar el registro del residuo si falla la trazabilidad
+    }
 
     return {
       success: true,
-      waste: { ...newWaste, _id: result.insertedId },
+      waste: wasteWithId,
     }
   } catch (error) {
     console.error("Error registering waste:", error)

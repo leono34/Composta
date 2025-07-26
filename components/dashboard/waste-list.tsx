@@ -20,6 +20,7 @@ import {
   Palette,
 } from "lucide-react"
 import { WasteRegistrationModal } from "./waste-registration-modal"
+import { WasteDetailsModal } from "./waste-details-modal"
 import { getSectorColor } from "@/lib/services/imageService"
 import type { Waste } from "@/lib/models/Waste"
 import type { User } from "@/lib/models/User"
@@ -32,6 +33,8 @@ interface WasteListProps {
 
 export function WasteList({ user, wastes, onWasteUpdate }: WasteListProps) {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [selectedWaste, setSelectedWaste] = useState<Waste | null>(null)
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -135,6 +138,11 @@ export function WasteList({ user, wastes, onWasteUpdate }: WasteListProps) {
       default:
         return "Otros"
     }
+  }
+  
+  const handleViewDetails = (waste: Waste) => {
+    setSelectedWaste(waste)
+    setShowDetailsModal(true)
   }
 
   if (wastes.length === 0) {
@@ -276,6 +284,7 @@ export function WasteList({ user, wastes, onWasteUpdate }: WasteListProps) {
                           size="sm"
                           variant="outline"
                           className="w-full mt-3 bg-transparent text-blue-600 border-blue-200 hover:bg-blue-50"
+                          onClick={() => handleViewDetails(waste)}
                         >
                           <Eye className="h-3 w-3 mr-1" />
                           VER DETALLES
@@ -295,6 +304,13 @@ export function WasteList({ user, wastes, onWasteUpdate }: WasteListProps) {
         isOpen={showRegistrationModal}
         onClose={() => setShowRegistrationModal(false)}
         onWasteRegistered={onWasteUpdate}
+      />
+            
+      <WasteDetailsModal
+        waste={selectedWaste}
+        user={user}
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
       />
     </>
   )

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Loader2, X, Building, User, Palette } from "lucide-react"
+import { Loader2, Building, User, Palette } from "lucide-react"
 import { getAvailableSectors } from "@/lib/services/imageService"
 import type { User as UserType } from "@/lib/models/User"
 
@@ -140,7 +140,6 @@ export function WasteRegistrationModal({ user, isOpen, onClose, onWasteRegistere
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               {user.userType === "empresa" ? (
                 <Building className="h-6 w-6 text-blue-600" />
@@ -156,10 +155,6 @@ export function WasteRegistrationModal({ user, isOpen, onClose, onWasteRegistere
                   <span>Se generará una imagen automáticamente con Stability AI - Stable Diffusion</span>
                 </DialogDescription>
               </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
           </div>
         </DialogHeader>
 

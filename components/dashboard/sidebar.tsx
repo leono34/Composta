@@ -7,6 +7,8 @@ import { User, Camera, LogOut, Recycle, BarChart3, FileText, MapPin } from "luci
 import Link from "next/link"
 import { EditProfileModal } from "./edit-profile-modal"
 import { PhotoUploadModal } from "./photo-upload-modal"
+import { LanguageSelector } from "@/components/LanguageSelector"
+import { useLanguage } from "@/lib/contexts/LanguageContext"
 import type { User as UserType } from "@/lib/models/User"
 
 interface SidebarProps {
@@ -15,6 +17,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ user, onUserUpdate }: SidebarProps) {
+  const { t } = useLanguage()
   const [showEditProfile, setShowEditProfile] = useState(false)
   const [showPhotoUpload, setShowPhotoUpload] = useState(false)
 
@@ -35,13 +38,13 @@ export function Sidebar({ user, onUserUpdate }: SidebarProps) {
   const menuItems = [
     {
       icon: <Recycle className="h-5 w-5" />,
-      label: "Dashboard",
+      label: t("dashboard"),
       href: "/dashboard",
       active: true,
     },
     {
       icon: <FileText className="h-5 w-5" />,
-      label: "Registrar Residuo",
+      label: t("registerWaste"),
       onClick: () => {
         // Esta funcionalidad ahora se maneja desde el dashboard
         // No necesitamos navegar a otra página
@@ -49,12 +52,12 @@ export function Sidebar({ user, onUserUpdate }: SidebarProps) {
     },
     {
       icon: <MapPin className="h-5 w-5" />,
-      label: "Trazabilidad",
+      label: t("traceability"),
       href: "/traceability",
     },
     {
       icon: <BarChart3 className="h-5 w-5" />,
-      label: "Impacto Ambiental",
+      label: t("environmentalImpact"),
       href: "/impact",
     },
   ]
@@ -68,6 +71,7 @@ export function Sidebar({ user, onUserUpdate }: SidebarProps) {
             <Recycle className="h-8 w-8 text-green-600" />
             <span className="text-xl font-bold text-gray-900">EcoCycle XR</span>
           </div>
+          <LanguageSelector />
         </div>
 
         {/* Perfil del Usuario */}
@@ -95,7 +99,7 @@ export function Sidebar({ user, onUserUpdate }: SidebarProps) {
                 user.userType === "empresa" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
               }`}
             >
-              {user.userType === "empresa" ? "Empresa" : "Persona"}
+              {user.userType === "empresa" ? t("company") : t("person")}
             </span>
           </div>
 
@@ -107,7 +111,7 @@ export function Sidebar({ user, onUserUpdate }: SidebarProps) {
               onClick={() => setShowEditProfile(true)}
             >
               <User className="h-4 w-4 mr-2" />
-              Editar Perfil
+              {t("edit")} {t("person")}
             </Button>
           </div>
         </div>
@@ -151,7 +155,7 @@ export function Sidebar({ user, onUserUpdate }: SidebarProps) {
             onClick={handleLogout}
           >
             <LogOut className="h-4 w-4 mr-2" />
-            Cerrar Sesión
+            {t("logout")}
           </Button>
         </div>
       </div>
